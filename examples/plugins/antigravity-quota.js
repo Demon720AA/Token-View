@@ -10,7 +10,9 @@
  * with a different HOME queries a different Google account. List extra
  * profiles in AGY_EXTRA_ACCOUNTS as "Label=/path/to/home" pairs
  * (comma-separated); the main account (the service's own HOME) is
- * always polled first and every account gets its own labelled buckets.
+ * always polled first. Buckets and credits are labelled with the
+ * account email decoded from each profile's id_token, so the
+ * accounts are told apart.
  *
  * The service needs write access to each extra profile's
  * .gemini/antigravity-cli directory so agy can refresh its token —
@@ -20,15 +22,37 @@
  */
 
 const { execFile } = require('node:child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const AGY = process.env.AGY_BIN || 'agy';
 const TIMEOUT_MS = Number(process.env.AGY_TIMEOUT) || 90_000;
 
-/** main account first, then every AGY_EXTRA_ACCOUNTS="Label=/home" pair */
+/** main account first, then every AGY_EXTRA_ACCOUNTS="Label=/path/to/home" pair */
 const ACCOUNTS = [{ label: 'Main', home: null }];
 for (const pair of (process.env.AGY_EXTRA_ACCOUNTS || '').split(',').filter(Boolean)) {
   const eq = pair.indexOf('=');
   if (eq > 0) ACCOUNTS.push({ label: pair.slice(0, eq), home: pair.slice(eq + 1) });
+}
+
+/**
+ * Account identity: the email claim of the profile's id_token
+ * (a JWT inside antigravity-oauth-token). Falls back to the
+ * configured label when the file is missing or unreadable.
+ */
+function accountEmail(home) {
+  const base = home || process.env.HOME || os.homedir();
+  try {
+    const j = JSON.parse(
+      fs.readFileSync(path.join(base, '.gemini/antigravity-cli/antigravity-oauth-token'), 'utf8')
+    );
+    const payload = String(j.id_token || '').split('.')[1];
+    if (!payload) return null;
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).email || null;
+  } catch {
+    return null;
+  }
 }
 
 function runAgy(prompt, home) {
@@ -57,8 +81,9 @@ function runAgy(prompt, home) {
 }
 
 async function pollAccount(a) {
+  const label = accountEmail(a.home) || a.label;
   const [usage, credits] = await Promise.all([runAgy('/usage', a.home), runAgy('/credits', a.home)]);
-  const out = { label: a.label, buckets: [], credits: null, error: null };
+  const out = { label, buckets: [], credits: null, error: null };
   if (!usage.ok) {
     out.error = usage.error;
     return out;
@@ -67,7 +92,7 @@ async function pollAccount(a) {
   for (const g of groups) {
     for (const b of g.buckets ?? []) {
       out.buckets.push({
-        group: a.label + ' · ' + g.name,
+        group: label + ' · ' + g.name,
         id: a.label.toLowerCase() + '-' + b.id,
         name: b.name,
         window: b.window,
@@ -79,7 +104,7 @@ async function pollAccount(a) {
   }
   const c = credits.ok ? credits.data?.command?.data : null;
   if (c) {
-    out.credits = { label: a.label, remaining: c.remaining_credits ?? null, upgradeUri: c.upgrade_uri ?? null };
+    out.credits = { label, remaining: c.remaining_credits ?? null, upgradeUri: c.upgrade_uri ?? null };
   }
   return out;
 }

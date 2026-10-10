@@ -16,7 +16,8 @@
  *   quota     external account quota for the big block on the source page:
  *             { state: 'live', buckets: [ { group, name, window,
  *               remainingFraction, resetTime?, description? } ],
- *               credits?: { remaining }, checkedAt }
+ *               credits?: { remaining } or [{ label, remaining }],
+ *               checkedAt }
  *   catalogue model list for /models: { state: 'live', models: [ {
  *               id, provider?, context?, maxOutput?, tools?, reachable?,
  *               status?, limited?: { hits, lastHit } } ] }
