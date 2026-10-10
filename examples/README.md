@@ -23,7 +23,7 @@ traffic so the pages are never blank.
 | File | What it does |
 | --- | --- |
 | `plugins/opencode-db.js` | Real usage from the opencode SQLite database (totals + per-message feed) |
-| `plugins/opencode-catalogue.js` | Model list/prices/reachability via `opencode api GET /api/model` |
+| `plugins/opencode-catalogue.js` | Model list/prices/reachability via `opencode api GET /api/model`, plus quota: OpenRouter key budget + free daily allowance via `GET /api/v1/auth/key`, plus per-model rate-limit hits scraped from the opencode log |
 | `plugins/rest-poller.js` | **Template**: poll any HTTP JSON endpoint (`enabled: false` until configured) |
 | `plugins/cli-poller.js` | **Template**: run any CLI that prints JSON, expose it as the account quota block |
 | `plugins/plugin-template.js` | Minimal skeleton with the full result reference |
@@ -32,7 +32,6 @@ traffic so the pages are never blank.
 source to pair with the pollers above.
 
 ## Writing a plugin for another LLM
-
 1. Copy `plugins/plugin-template.js` to `plugins/<name>.js`.
 2. Set `id` to a source id from your `config/sources.json` and `enabled: true`.
 3. Implement `poll()` to return `{ total?, events?, quota?, catalogue? }`
@@ -49,3 +48,18 @@ Two common patterns:
   `map()`. Poll slowly — these commands can take seconds.
 
 Source ids must match `^[a-z0-9-]+$` (they become URL paths: `/<id>`).
+
+## Quota without a quota API
+
+Many free tiers expose no "remaining allowance" endpoint. Two workarounds,
+both demonstrated by `opencode-catalogue.js`:
+
+- **Provider key API**: some providers (e.g. OpenRouter `GET /api/v1/auth/key`)
+  report budget + daily free allowance for the key. Return it as `quota.buckets`
+  and the source page renders the big remaining blocks. Secrets go in env vars
+  (`OPENROUTER_API_KEY`); reusing a locally stored credential is acceptable only
+  because it never leaves the machine.
+- **Observed rate limits**: scrape the backend's own log for
+  `RateLimit`/`QuotaExceeded` errors and attribute them (via session/request id)
+  to models as `limited: { hits, lastHit }`. The Models page renders a badge.
+  Absence of hits means "not recently limited", not "unlimited" — say so in docs.

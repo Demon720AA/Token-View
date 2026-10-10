@@ -2,7 +2,8 @@ node_modules/
 *.log
 .DS_Store
 
-# local-only: never committed
-plugins/
-!plugins/.gitkeep
+# local-only: never committed (leading / = repo root only,
+// so examples/plugins/ stays tracked)
+/plugins/
+!/plugins/.gitkeep
 config/sources.json

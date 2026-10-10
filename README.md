@@ -161,6 +161,14 @@ curl -X POST localhost:4173/api/ingest \
 - การ์ดแต่ละ source มี meter แสดง token ที่เหลือ เปอร์เซ็นต์ที่ใช้ และคาดการณ์ว่าจะหมดเมื่อไร (จากอัตราตอนนี้)
 - สี: เขียว (<65%) → เหลือง (65–85%) → แดง (>85%) เกิน 100% เป็นลายทแยง
 - ถ้า plugin รายงาน account quota มา หน้า source จะแสดงบล็อกใหญ่พร้อม % ที่เหลือ สถานะ และเวลานับถอยหลังถึงวันรีเซ็ต
+- ตัวอย่างที่แถมมา (`opencode-catalogue.js`) ดึงโควตาจริงของ OpenRouter ผ่าน
+  `GET /api/v1/auth/key` ได้ 2 ถัง: **free daily requests** (โควตารายวันของ model ฟรี —
+  หมดแล้ว model ฟรีจะตอบ rate-limit จนเที่ยงคืน UTC) กับ **monthly $ budget**
+  (เฉพาะ model เสียเงิน) — คีย์อ่านจาก `OPENROUTER_API_KEY` หรือ credential ที่
+  opencode เก็บไว้เอง
+- นอกจากนั้น plugin ตัวเดียวกันอ่าน log หา `RateLimit`/`QuotaExceeded` แล้วโยงกับ
+  model หน้า Models จะขึ้น badge `limited ×N` — ไม่มี badge แปลว่า "ไม่โดนเมื่อเร็ว ๆ นี้"
+  ไม่ใช่ "ไม่จำกัด"
 - `cache read` แสดงแยกและ**ไม่นับเข้าโควตา** เพราะเป็น prompt-cache hit ไม่ใช่ token ใหม่
 
 ## ดูสถานะ service

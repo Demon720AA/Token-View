@@ -33,6 +33,13 @@ function stateOf(m) {
   return { key: 'idle', label: 'available' };
 }
 
+/** extra badge when the backend log shows this model being rate-limited */
+function limitedBadge(m) {
+  const l = m.limited;
+  if (!l || !l.hits) return '';
+  return ` <span class="badge crit" title="rate-limited ${l.hits}× · last ${ago(l.lastHit)}">limited ×${l.hits}</span>`;
+}
+
 function render(data) {
   last = data;
 
@@ -89,7 +96,7 @@ function renderTable(models, total) {
       return `<tr>
         <td><b>${m.id}</b></td>
         <td class="dim">${m.provider}</td>
-        <td><span class="badge ${st.key === 'bad' ? 'crit' : st.key === 'ok' ? 'ok' : ''}">${st.label}</span></td>
+        <td><span class="badge ${st.key === 'bad' ? 'crit' : st.key === 'ok' ? 'ok' : ''}">${st.label}</span>${limitedBadge(m)}</td>
         <td class="r">${m.context ? compact(m.context) : '—'}</td>
         <td class="r">${m.maxOutput ? compact(m.maxOutput) : '—'}</td>
         <td class="dim">${m.tools ? 'yes' : 'no'}</td>
