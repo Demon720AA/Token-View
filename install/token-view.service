@@ -1,0 +1,28 @@
+[Unit]
+Description=Token View — real-time LLM usage dashboard
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Token-View
+ExecStart=%h/.local/bin/token-view-server
+Environment=PORT=4173
+Environment=LIVE=true
+Restart=on-failure
+RestartSec=3
+
+# The dashboard only needs to read usage data and serve localhost.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=%h/.local/share/opencode
+ReadOnlyPaths=%h/.gemini
+ReadOnlyPaths=%h/Token-View
+
+# `opencode api` insists on opening its own log file for writing.
+ReadWritePaths=%h/.local/share/opencode/log
+
+[Install]
+WantedBy=graphical-session.target

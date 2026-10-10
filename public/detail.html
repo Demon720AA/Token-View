@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Token View — per-model detail</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" id="statusDot"></span>
+    <h1>Token<span>View</span></h1>
+    <span class="sub">per-model detail</span>
+  </div>
+  <nav class="nav">
+    <a class="nav-link" href="/">All</a>
+    <a class="nav-link" href="/antigravity">Antigravity</a>
+    <a class="nav-link" href="/opencode">OpenCode</a>
+    <a class="nav-link" href="/models">Free models</a>
+    <a class="nav-link active" href="/detail">Detail</a>
+  </nav>
+  <div class="topmeta">
+    <span class="pill" id="modePill">live</span>
+    <span id="clock" class="mono">--:--:--</span>
+    <span class="pill" id="connPill">connecting</span>
+  </div>
+</header>
+
+<main>
+  <section class="kpis">
+    <div class="kpi">
+      <span class="label">Models seen</span>
+      <strong id="modelCount" class="value">0</strong>
+      <span class="delta" id="modelCountSub">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Top model</span>
+      <strong id="topModel" class="value small">—</strong>
+      <span class="delta" id="topModelSub">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Output tok/s</span>
+      <strong id="detailTps" class="value">0</strong>
+      <span class="delta">last 5s</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Cache read</span>
+      <strong id="cacheRead" class="value">0</strong>
+      <span class="delta" id="cacheShare">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Reasoning</span>
+      <strong id="reasoning" class="value">0</strong>
+      <span class="delta">thinking tokens</span>
+    </div>
+    <div class="kpi accent">
+      <span class="label">Cost</span>
+      <strong id="detailCost" class="value">$0.0000</strong>
+      <span class="delta" id="unpriced">&nbsp;</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Token breakdown by model</h2>
+      <span class="range" id="tableNote">input · output · cache read · reasoning · cost</span>
+    </div>
+    <div class="table-wrap">
+      <table class="dtable" id="modelTable">
+        <thead>
+          <tr>
+            <th>Model</th><th>Provider</th>
+            <th class="r">Input</th><th class="r">Output</th>
+            <th class="r">Cache read</th><th class="r">Reasoning</th>
+            <th class="r">Total</th><th class="r">Share</th>
+            <th class="r">tok/s</th><th class="r">Reqs</th><th class="r">Errors</th><th class="r">Cost</th>
+            <th>Split</th><th>Last seen</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Model share</h2><span class="range">of all tokens</span></div>
+    <div id="shareBars" class="sharebars"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>per-model detail · <code>GET /api/summary</code> <code>GET /api/events?limit=200</code></span>
+  <span>back to <a class="nav-link" href="/">live view</a></span>
+</footer>
+
+<script src="/detail.js"></script>
+</body>
+</html>

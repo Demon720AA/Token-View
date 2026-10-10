@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Token View
+GenericName=LLM Token Monitor
+Comment=Real-time token usage for antigravity and opencode
+Exec=token-view
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Development;System;
+StartupNotify=true
+StartupWMClass=TokenView

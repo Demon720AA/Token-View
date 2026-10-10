@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Token View server launcher — resolves node from PATH.
+# Installed to ~/.local/bin/token-view-server by install.sh.
+set -euo pipefail
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../Token-View" 2>/dev/null && pwd || echo "$HOME/Token-View")"
+NODE="$(command -v node || true)"
+
+if [ -z "$NODE" ]; then
+  echo "token-view: 'node' not found on PATH (need Node 18+)" >&2
+  exit 1
+fi
+
+cd "$APP_DIR"
+exec "$NODE" server.js

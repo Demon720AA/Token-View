@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Token View — live</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" id="statusDot"></span>
+    <h1>Token<span>View</span></h1>
+    <span class="sub">real-time LLM usage</span>
+  </div>
+  <nav class="nav">
+    <a class="nav-link active" href="/">All</a>
+    <a class="nav-link" href="/antigravity">Antigravity</a>
+    <a class="nav-link" href="/opencode">OpenCode</a>
+    <a class="nav-link" href="/models">Free models</a>
+    <a class="nav-link" href="/detail">Detail</a>
+  </nav>
+  <div class="topmeta">
+    <span class="pill" id="modePill">live</span>
+    <span id="clock" class="mono">--:--:--</span>
+    <span class="pill" id="connPill">connecting</span>
+  </div>
+</header>
+
+<main>
+  <section class="kpis">
+    <div class="kpi">
+      <span class="label">Output tokens / sec</span>
+      <strong id="tps" class="value">0</strong>
+      <span class="delta" id="tpsDelta">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Active requests</span>
+      <strong id="active" class="value">0</strong>
+      <span class="delta" id="activeDelta">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Total tokens</span>
+      <strong id="totalTokens" class="value">0</strong>
+      <span class="delta">in + out</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Requests</span>
+      <strong id="requests" class="value">0</strong>
+      <span class="delta" id="errors">&nbsp;</span>
+    </div>
+    <div class="kpi accent">
+      <span class="label">Cost</span>
+      <strong id="cost" class="value">$0.0000</strong>
+      <span class="delta">session</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Quota remaining</span>
+      <strong id="remaining" class="value">—</strong>
+      <span class="delta" id="remainingSub">&nbsp;</span>
+    </div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="panel-head">
+      <h2>Throughput</h2>
+      <div class="legend">
+        <span class="key"><i class="sw in"></i>input</span>
+        <span class="key"><i class="sw out"></i>output</span>
+        <span class="range" id="rangeLabel">last 60s</span>
+      </div>
+    </div>
+    <canvas id="chart" height="220"></canvas>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Source totals</h2>
+      <span class="range">per source, all models</span>
+    </div>
+    <div id="sourceCards" class="sourcecards"></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <div class="panel-head"><h2 id="modelTitle">By model</h2><span class="range">share of tokens</span></div>
+      <div id="models" class="models"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Live tokens</h2><span class="range" id="streamCount">0 events</span></div>
+      <div id="stream" class="stream"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>events stream over SSE · <code>GET /api/summary</code></span>
+  <span>per-model breakdown on the <a class="nav-link" href="/detail">detail page</a></span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

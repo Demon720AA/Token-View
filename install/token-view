@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Open Token View in its own window.
+# Prefers a Chromium-based browser in --app mode; falls back to the default browser.
+# Installed to ~/.local/bin/token-view by install.sh.
+set -euo pipefail
+
+URL="${TOKEN_VIEW_URL:-http://localhost:4173}"
+
+launch_app_mode() {
+  # $1 = binary, rest = extra args
+  local bin="$1"; shift
+  exec "$bin" --app="$URL" --class=TokenView "$@"
+}
+
+if command -v brave >/dev/null 2>&1; then
+  launch_app_mode brave --user-data-dir="$HOME/.cache/token-view-browser" --no-first-run --no-default-browser-check
+elif command -v google-chrome >/dev/null 2>&1; then
+  launch_app_mode google-chrome --user-data-dir="$HOME/.cache/token-view-browser" --no-first-run --no-default-browser-check
+elif command -v chromium >/dev/null 2>&1; then
+  launch_app_mode chromium --user-data-dir="$HOME/.cache/token-view-browser" --no-first-run --no-default-browser-check
+elif [ -n "${FLATPAK_ID:-}" ]; then
+  # running inside a sandbox — just open the URL
+  exec xdg-open "$URL"
+elif command -v flatpak >/dev/null 2>&1 && flatpak info com.brave.Browser >/dev/null 2>&1; then
+  exec flatpak run --command=brave com.brave.Browser \
+    --app="$URL" \
+    --class=TokenView \
+    --user-data-dir="$HOME/.cache/token-view-browser" \
+    --no-first-run \
+    --no-default-browser-check
+elif command -v firefox >/dev/null 2>&1; then
+  exec firefox --new-window "$URL"
+else
+  exec xdg-open "$URL"
+fi

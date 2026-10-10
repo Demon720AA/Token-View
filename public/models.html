@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Free models — Token View</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" id="statusDot"></span>
+    <h1>Token<span>View</span></h1>
+    <span class="sub">free model traffic</span>
+  </div>
+  <nav class="nav">
+    <a class="nav-link" href="/">All</a>
+    <a class="nav-link" href="/antigravity">Antigravity</a>
+    <a class="nav-link" href="/opencode">OpenCode</a>
+    <a class="nav-link" id="navModels" href="/models">Free models</a>
+    <a class="nav-link" href="/detail">Detail</a>
+  </nav>
+  <div class="topmeta">
+    <span class="pill" id="modePill">free only</span>
+    <span id="clock" class="mono">--:--:--</span>
+    <span class="pill" id="connPill">connecting</span>
+  </div>
+</header>
+
+<main>
+  <section class="kpis">
+    <div class="kpi">
+      <span class="label">Free models</span>
+      <strong id="freeCount" class="value">0</strong>
+      <span class="delta" id="catalogueNote">&nbsp;</span>
+    </div>
+    <div class="kpi accent">
+      <span class="label">Reachable</span>
+      <strong id="reachableCount" class="value">0</strong>
+      <span class="delta" id="reachableNote">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">In use</span>
+      <strong id="usedCount" class="value">0</strong>
+      <span class="delta">carried traffic</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Unused but free</span>
+      <strong id="idleCount" class="value">0</strong>
+      <span class="delta" id="idleNote">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Best context</span>
+      <strong id="bestContext" class="value small">—</strong>
+      <span class="delta" id="bestContextNote">&nbsp;</span>
+    </div>
+    <div class="kpi">
+      <span class="label">Traffic on free models</span>
+      <strong id="freeTraffic" class="value">0</strong>
+      <span class="delta" id="freeTrafficNote">&nbsp;</span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Free models — traffic &amp; reachability</h2>
+      <div class="legend">
+        <span class="key"><span class="dot ok"></span>can connect</span>
+        <span class="key"><span class="dot bad"></span>blocked</span>
+        <span class="key"><span class="dot idle"></span>untested</span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="dtable" id="modelTable">
+        <thead>
+          <tr>
+            <th>Model</th><th>Provider</th><th>State</th>
+            <th class="r">Context</th><th class="r">Max out</th><th>Tools</th>
+            <th class="r">Requests</th><th class="r">Input</th><th class="r">Output</th>
+            <th class="r">Cache read</th><th class="r">Tokens</th><th class="r">Share</th>
+            <th>Usage</th><th>Last used</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Traffic by free model</h2><span class="range">total tokens</span></div>
+    <div id="shareBars" class="sharebars"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>catalogue from <code>opencode api GET /api/model</code> · traffic from <code>GET /api/models</code></span>
+  <span>reachability = opencode <code>status</code> / <code>enabled</code></span>
+</footer>
+
+<script src="/models.js"></script>
+</body>
+</html>
