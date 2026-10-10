@@ -7,9 +7,15 @@
       "quota": { "tokens": 200000000, "costUsd": null, "period": "month" }
     },
     {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "color": "#bb9af7",
+      "quota": { "tokens": 200000000, "costUsd": null, "period": "month" }
+    },
+    {
       "id": "my-llm",
       "label": "My LLM",
-      "color": "#bb9af7",
+      "color": "#e0af68",
       "quota": { "tokens": 10000000, "costUsd": null, "period": "month" }
     }
   ]

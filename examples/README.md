@@ -6,11 +6,13 @@ from **plugins** — small CommonJS modules in `plugins/` (git-ignored, local on
 ## Quick start
 
 ```bash
-# 1. declare your sources
-cp config/sources.example.json config/sources.json
-# 2. activate a plugin
-cp examples/plugins/opencode-db.js plugins/
-cp examples/plugins/opencode-catalogue.js plugins/
+# 1. declare your sources (this folder's sources.json has opencode + openrouter + template)
+cp examples/sources.json config/sources.json
+# 2. activate plugins (one copy per provider for the db reader)
+cp examples/plugins/opencode-db.js examples/plugins/opencode-catalogue.js plugins/
+cp examples/plugins/openrouter.js plugins/
+cp examples/plugins/opencode-db.js plugins/openrouter-db.js
+#   then in plugins/openrouter-db.js set SOURCE_ID and PROVIDER to 'openrouter'
 # 3. restart the service
 systemctl --user restart token-view
 ```
@@ -22,8 +24,9 @@ traffic so the pages are never blank.
 
 | File | What it does |
 | --- | --- |
-| `plugins/opencode-db.js` | Real usage from the opencode SQLite database (totals + per-message feed) |
-| `plugins/opencode-catalogue.js` | Model list/prices/reachability via `opencode api GET /api/model`, plus quota: OpenRouter key budget + free daily allowance via `GET /api/v1/auth/key`, plus per-model rate-limit hits scraped from the opencode log |
+| `plugins/opencode-db.js` | Real usage from the opencode SQLite database (totals + per-message feed). Tracks one provider per copy — set `SOURCE_ID`/`PROVIDER` at the top (e.g. copy to `openrouter-db.js` with both set to `'openrouter'`) |
+| `plugins/opencode-catalogue.js` | Free models of the opencode (Zen) provider via `opencode api GET /api/model`, plus per-model rate-limit hits scraped from the opencode log |
+| `plugins/openrouter.js` | Free models of the OpenRouter provider, plus real quota from `GET /api/v1/auth/key` (monthly budget + free daily allowance) and per-model rate-limit hits |
 | `plugins/rest-poller.js` | **Template**: poll any HTTP JSON endpoint (`enabled: false` until configured) |
 | `plugins/cli-poller.js` | **Template**: run any CLI that prints JSON, expose it as the account quota block |
 | `plugins/plugin-template.js` | Minimal skeleton with the full result reference |
@@ -52,7 +55,7 @@ Source ids must match `^[a-z0-9-]+$` (they become URL paths: `/<id>`).
 ## Quota without a quota API
 
 Many free tiers expose no "remaining allowance" endpoint. Two workarounds,
-both demonstrated by `opencode-catalogue.js`:
+both demonstrated by `openrouter.js` (key API) and `opencode-catalogue.js` (log scraping):
 
 - **Provider key API**: some providers (e.g. OpenRouter `GET /api/v1/auth/key`)
   report budget + daily free allowance for the key. Return it as `quota.buckets`

@@ -88,8 +88,9 @@ systemctl --user restart token-view
 
 | ไฟล์ | ใช้เมื่อ |
 | --- | --- |
-| `opencode-db.js` | อ่าน usage จริงจากฐานข้อมูล SQLite ของ opencode |
-| `opencode-catalogue.js` | รายชื่อ/ราคา/reachability ของ model ผ่าน `opencode api` |
+| `opencode-db.js` | อ่าน usage จริงจากฐานข้อมูล SQLite ของ opencode — ก็อปปี้ไฟล์ละ provider แล้วตั้ง `SOURCE_ID`/`PROVIDER` (เช่น `openrouter-db.js`) |
+| `opencode-catalogue.js` | รายชื่อ/ราคา/reachability ของ model ฝั่ง opencode (Zen) ผ่าน `opencode api` + badge rate-limit จาก log |
+| `openrouter.js` | ฝั่ง OpenRouter: รายชื่อ model ฟรี + โควตาจริงจาก `GET /api/v1/auth/key` (budget รายเดือน + free daily) + badge rate-limit |
 | `rest-poller.js` | **แม่แบบ**: backend มี HTTP endpoint ที่คืน JSON — กรอก URL + ปรับ `map()` |
 | `cli-poller.js` | **แม่แบบ**: backend มีแต่ CLI ที่พิมพ์ JSON (เช่นคำสั่ง `/usage`) — กรอกคำสั่ง + ปรับ `map()` |
 | `plugin-template.js` | โครงเปล่าพร้อมเอกสารครบ |
@@ -161,11 +162,11 @@ curl -X POST localhost:4173/api/ingest \
 - การ์ดแต่ละ source มี meter แสดง token ที่เหลือ เปอร์เซ็นต์ที่ใช้ และคาดการณ์ว่าจะหมดเมื่อไร (จากอัตราตอนนี้)
 - สี: เขียว (<65%) → เหลือง (65–85%) → แดง (>85%) เกิน 100% เป็นลายทแยง
 - ถ้า plugin รายงาน account quota มา หน้า source จะแสดงบล็อกใหญ่พร้อม % ที่เหลือ สถานะ และเวลานับถอยหลังถึงวันรีเซ็ต
-- ตัวอย่างที่แถมมา (`opencode-catalogue.js`) ดึงโควตาจริงของ OpenRouter ผ่าน
+- ตัวอย่างที่แถมมา (`openrouter.js`) ดึงโควตาจริงของ OpenRouter ผ่าน
   `GET /api/v1/auth/key` ได้ 2 ถัง: **free daily requests** (โควตารายวันของ model ฟรี —
   หมดแล้ว model ฟรีจะตอบ rate-limit จนเที่ยงคืน UTC) กับ **monthly $ budget**
   (เฉพาะ model เสียเงิน) — คีย์อ่านจาก `OPENROUTER_API_KEY` หรือ credential ที่
-  opencode เก็บไว้เอง
+  opencode เก็บไว้เอง หน้า `/openrouter` จะแสดงเป็นบล็อกใหญ่ให้เอง
 - นอกจากนั้น plugin ตัวเดียวกันอ่าน log หา `RateLimit`/`QuotaExceeded` แล้วโยงกับ
   model หน้า Models จะขึ้น badge `limited ×N` — ไม่มี badge แปลว่า "ไม่โดนเมื่อเร็ว ๆ นี้"
   ไม่ใช่ "ไม่จำกัด"
@@ -193,7 +194,7 @@ Token-View/
 ├── examples/
 │   ├── README.md             # วิธีต่อ backend
 │   ├── sources.json          # ตัวอย่าง config
-│   └── plugins/              # opencode-db, opencode-catalogue, rest/cli poller, template
+│   └── plugins/              # opencode-db, opencode-catalogue, openrouter, rest/cli poller, template
 ├── install/
 │   ├── install.sh            # ติดตั้ง/ถอนการติดตั้ง
 │   ├── token-view.service    # systemd user unit (ใช้ %h แทน home)

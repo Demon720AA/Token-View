@@ -33,6 +33,13 @@ const os = require('os');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite'); // Node 18+, no npm needed
 
+// Which source this instance feeds, and which provider it tracks.
+// Copy this file per provider: plugins/opencode-db.js
+// (SOURCE_ID 'opencode', PROVIDER 'opencode') and plugins/openrouter-db.js
+// (SOURCE_ID 'openrouter', PROVIDER 'openrouter').
+const SOURCE_ID = 'opencode';
+const PROVIDER = 'opencode'; // model.providerID to track, or null for all providers
+
 const DB = path.join(os.homedir(), '.local/share/opencode/opencode.db');
 const DISPLAY = DB.replace(os.homedir(), '~');
 
@@ -68,6 +75,13 @@ function readDb() {
     const total = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
     let sessions = 0;
     for (const r of rows) {
+      if (PROVIDER) {
+        let pid = null;
+        try {
+          pid = JSON.parse(r.model)?.providerID ?? null;
+        } catch {}
+        if (pid !== PROVIDER) continue;
+      }
       sessions++;
       total.input += r.tokens_input ?? 0;
       total.output += r.tokens_output ?? 0;
@@ -108,7 +122,8 @@ function readDb() {
             cacheWrite: (t.cache || {}).write || 0,
             cost: d.cost || 0,
           };
-        });
+        })
+        .filter((m) => !PROVIDER || m.provider === PROVIDER);
     } catch {}
 
     return { total, sessions, messages };
@@ -137,7 +152,7 @@ function freshSince(prev, messages) {
 let prev = null;
 
 module.exports = {
-  id: 'opencode',
+  id: SOURCE_ID,
   intervalMs: 2000,
 
   async poll() {
