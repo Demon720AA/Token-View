@@ -29,7 +29,7 @@ function quotaLevel(p) {
 function colorFor(id) {
   if (!colorFor.map) colorFor.map = new Map();
   if (!colorFor.map.has(id)) {
-    const pal = ['#e8a33d', '#4ade80', '#5b8c5b', '#cfe3cf'];
+    const pal = ['#e8a33d', '#9ece6a', '#5b8c5b', '#cfe3cf'];
     colorFor.map.set(id, pal[colorFor.map.size % pal.length]);
   }
   return colorFor.map.get(id);
@@ -74,8 +74,8 @@ function drawChart() {
 
   const max = Math.max(80, ...buckets.map((b) => b.input + b.output)) * 1.15;
 
-  ctx.strokeStyle = '#1e2a1e';
-  ctx.fillStyle = '#6f8a6f';
+  ctx.strokeStyle = '#292e42';
+  ctx.fillStyle = '#565f89';
   ctx.lineWidth = 1;
   ctx.font = '11px ui-monospace, monospace';
   ctx.textAlign = 'right';
@@ -105,13 +105,13 @@ function drawChart() {
       ctx.fillRect(x(i) + offset, base - bh, width, bh);
     });
   };
-  bars('input', 'rgba(110,150,110,.5)', 0.55);
-  bars('output', 'rgba(74,222,128,.85)', 0.9);
+  bars('input', 'rgba(125,207,255,.5)', 0.55);
+  bars('output', 'rgba(158,206,106,.85)', 0.9);
 
   const last = buckets[buckets.length - 1];
   if (last) {
     const py = pad.t + ih - ((last.input + last.output) / max) * ih;
-    ctx.fillStyle = '#4ade80';
+    ctx.fillStyle = '#9ece6a';
     ctx.beginPath();
     ctx.arc(x(buckets.length - 1), py, 3.5, 0, Math.PI * 2);
     ctx.fill();
@@ -119,7 +119,7 @@ function drawChart() {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = '#556b55';
+  ctx.fillStyle = '#3b4261';
   const tail = buckets.slice(-4);
   tail.forEach((b, k) => {
     const i = buckets.length - tail.length + k;
@@ -313,7 +313,7 @@ function renderEvent(e) {
   row.innerHTML =
     `<span class="t">${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}</span>` +
     `<span class="src" style="color:${colorFor(e.source)}">${e.source}</span>` +
-    `<span class="m" title="${e.model} · ${e.app} · ${e.endpoint}"><b>${e.model}</b> <span style="color:#6f8a6f">${e.app}</span></span>` +
+    `<span class="m" title="${e.model} · ${e.app} · ${e.endpoint}"><b>${e.model}</b> <span style="color:#565f89">${e.app}</span></span>` +
     `<span class="tok">+${num(e.outputTokens)} tok</span>` +
     `<span class="cost">${usd(e.costUsd)}</span>`;
   box.prepend(row);
