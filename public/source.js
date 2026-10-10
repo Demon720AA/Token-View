@@ -1,6 +1,7 @@
 'use strict';
-// One page per source: /antigravity and /opencode.
-// The source comes from the path, so there is no filter widget to get out of sync.
+// One page per configured source: /<source-id>.
+// The source comes from the path; label and color come from /api/sources
+// via the snapshot, so this page never names any specific backend.
 
 const $ = (id) => document.getElementById(id);
 const fmt = new Intl.NumberFormat();
@@ -17,13 +18,14 @@ const compact = (n) => {
   return String(Math.round(n));
 };
 
-const SRC = (location.pathname.replace(/^\/+|\/+$/g, '') || 'opencode').toLowerCase();
+const SRC = (location.pathname.replace(/^\/+|\/+$/g, '') || '').toLowerCase();
 
-document.title = SRC === 'antigravity' ? 'Antigravity — Token View' : 'OpenCode — Token View';
-$('pageSub').textContent = SRC === 'antigravity' ? 'antigravity' : 'opencode';
-document.documentElement.style.setProperty('--src', SRC === 'antigravity' ? '#f59e0b' : '#22d3ee');
-$('navAg').classList.toggle('active', SRC === 'antigravity');
-$('navOc').classList.toggle('active', SRC === 'opencode');
+/** apply the source's own label/color once the snapshot arrives */
+function applySourceIdentity(s) {
+  document.title = `${s.label} — Token View`;
+  $('pageSub').textContent = s.id;
+  document.documentElement.style.setProperty('--src', s.color);
+}
 
 let lastSnap = null;
 let eventCount = 0;
@@ -135,6 +137,7 @@ function render(snap) {
     $('provNote').textContent = 'unknown source: ' + SRC;
     return;
   }
+  applySourceIdentity(s);
 
   const isLive = snap.provenance?.mode === 'live';
   const mp = $('modePill');
@@ -240,12 +243,12 @@ function renderQuota(s) {
     if (pq.state !== 'live') {
       provider = `<div class="qb wide">
         <div class="qb-head"><span>account quota</span><span class="badge crit">unavailable</span></div>
-        <div class="delta">agy CLI: ${pq.error || 'no response'}</div>
+        <div class="delta">backend: ${pq.error || 'no response'}</div>
       </div>`;
     } else {
       provider =
-        `<div class="qb-head wide"><span>account quota · antigravity</span>
-          <span class="delta">live from agy CLI · checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span>
+        `<div class="qb-head wide"><span>account quota · ${s.label}</span>
+          <span class="delta">live from plugin · checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span>
         </div>` +
         pq.buckets
           .map((b) => {

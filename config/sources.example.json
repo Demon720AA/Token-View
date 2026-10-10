@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to config/sources.json and edit. Each source gets its own page at /<id>.",
+  "sources": [
+    {
+      "id": "my-llm",
+      "label": "My LLM",
+      "color": "#7dcfff",
+      "quota": { "tokens": 10000000, "costUsd": null, "period": "month" }
+    }
+  ]
+}

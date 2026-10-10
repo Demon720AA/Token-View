@@ -1,5 +1,5 @@
 'use strict';
-// Free-model page: which opencode free models exist, which still respond,
+// Catalogue page: which models exist, which still respond,
 // and how much traffic each one has carried.
 
 const $ = (id) => document.getElementById(id);
@@ -37,7 +37,7 @@ function render(data) {
   last = data;
 
   const mp = $('modePill');
-  mp.textContent = data.state === 'live' ? 'free only' : data.state;
+  mp.textContent = data.state === 'live' ? 'catalogue' : data.state;
   mp.className = 'pill ' + (data.state === 'live' ? 'ok' : 'warn');
 
   const models = data.models || [];
@@ -66,7 +66,7 @@ function render(data) {
   $('freeTrafficNote').textContent = data.checkedAt ? 'checked ' + new Date(data.checkedAt).toLocaleTimeString() : ' ';
 
   if (data.error && data.state !== 'live') {
-    $('catalogueNote').textContent = 'opencode unreachable: ' + data.error;
+    $('catalogueNote').textContent = 'backend unreachable: ' + data.error;
   }
 
   renderTable(models, totalTokens);
@@ -76,7 +76,7 @@ function render(data) {
 function renderTable(models, total) {
   const body = $('modelTable').querySelector('tbody');
   if (!models.length) {
-    body.innerHTML = '<tr><td colspan="14" class="empty">no models yet — is the opencode service running?</td></tr>';
+    body.innerHTML = '<tr><td colspan="14" class="empty">no models yet — is a catalogue plugin active?</td></tr>';
     return;
   }
 

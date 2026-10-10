@@ -2,7 +2,7 @@
 Type=Application
 Name=Token View
 GenericName=LLM Token Monitor
-Comment=Real-time token usage for antigravity and opencode
+Comment=Real-time LLM token usage monitor
 Exec=token-view
 Icon=utilities-system-monitor
 Terminal=false

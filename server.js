@@ -2,7 +2,8 @@
 /**
  * Real-time LLM token usage monitor.
  *
- * - Simulates streaming LLM traffic (or accepts real traffic via POST /api/ingest)
+ * - Sources are configured in config/sources.json (demo traffic if unconfigured)
+ * - Real data arrives through plugins/ (see examples/) or POST /api/ingest
  * - Broadcasts every event to browsers over Server-Sent Events (SSE)
  * - Keeps a rolling in-memory window for history / summary
  */
@@ -10,9 +11,44 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { startReader } = require('./reader.js');
-const { startAgyReader } = require('./agy.js');
-const { startModelReader } = require('./opencode-models.js');
+
+/**
+ * Sources are configured, not hardcoded — see config/sources.example.json.
+ * Copy it to config/sources.json and list one entry per LLM backend:
+ *   { id, label, color, quota: { tokens, costUsd, period } }
+ * Each source gets its own page at /<id>. Source ids must match [a-z0-9-]+
+ * because they become URL paths.
+ */
+function loadSources() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config', 'sources.json'), 'utf8'));
+    if (Array.isArray(cfg.sources) && cfg.sources.length) return cfg.sources;
+  } catch {}
+  return null;
+}
+
+// Demo fallback so a fresh clone shows living pages with no setup.
+const DEMO_SOURCES = [
+  {
+    id: 'demo-a', label: 'Demo A', color: '#7dcfff', weight: 50, maxOut: 1200,
+    quota: { tokens: 200_000_000, costUsd: null, period: 'month' },
+  },
+  {
+    id: 'demo-b', label: 'Demo B', color: '#bb9af7', weight: 50, maxOut: 1200,
+    quota: { tokens: 200_000_000, costUsd: null, period: 'month' },
+  },
+];
+
+let SOURCES = loadSources();
+let SIMULATE = process.env.SIMULATE === 'true';
+if (!SOURCES) {
+  SOURCES = DEMO_SOURCES;
+  if (process.env.SIMULATE === undefined) {
+    SIMULATE = true;
+    console.log('no config/sources.json — running built-in demo traffic (see config/sources.example.json)');
+  }
+}
+const DEFAULT_SOURCE = SOURCES[0].id;
 
 /** collapse $HOME to ~ so usernames never leak into API responses */
 function toDisplayPath(p) {
@@ -22,7 +58,6 @@ function toDisplayPath(p) {
 }
 
 const PORT = Number(process.env.PORT) || 4173;
-const SIMULATE = process.env.SIMULATE === 'true';
 const LIVE = process.env.LIVE !== 'false';
 const WINDOW_MS = 5 * 60 * 1000; // rolling history window
 const MAX_EVENTS = 20000;
@@ -38,32 +73,9 @@ const MODELS = [
 ];
 
 // ---------------------------------------------------------------- sources
-// Top-level clients whose tokens are tracked separately.
+// (loaded from config/sources.json above; DEMO_SOURCES when unconfigured)
 
-const SOURCES = [
-  {
-    id: 'antigravity',
-    label: 'Antigravity',
-    color: '#f59e0b',
-    weight: 45,
-    maxOut: 1200,
-    // token allowance for the current period (billed tokens, cache excluded)
-    quota: { tokens: 200_000_000, costUsd: null, period: 'month' },
-  },
-  {
-    id: 'opencode',
-    label: 'OpenCode',
-    color: '#22d3ee',
-    weight: 55,
-    maxOut: 1500,
-    quota: { tokens: 200_000_000, costUsd: null, period: 'month' },
-  },
-];
-
-const SOURCE_APPS = {
-  antigravity: ['agent-loop', 'tool-runner', 'chat-pane', 'indexer'],
-  opencode: ['web-app', 'api-gateway', 'batch-worker', 'ide-plugin'],
-};
+const SIM_APPS = ['web-app', 'api-gateway', 'batch-worker', 'ide-plugin'];
 
 const ENDPOINTS = [
   '/v1/chat/completions',
@@ -72,10 +84,8 @@ const ENDPOINTS = [
   '/v1/completions',
 ];
 
-const DEFAULT_SOURCE = 'antigravity';
-
 // Allow overriding quotas from the environment, e.g.
-//   QUOTA_antigravity=1000000 PERIOD=day node server.js
+//   QUOTA_MY-LLM=1000000 PERIOD=day node server.js
 const PERIOD = process.env.PERIOD || null;
 for (const s of SOURCES) {
   const envTokens = Number(process.env['QUOTA_' + s.id.toUpperCase()]);
@@ -127,11 +137,11 @@ const quotaState = new Map(
  */
 const liveQuota = new Map();
 
-/** real quota reported by the antigravity CLI (`agy -p /usage`) */
-let agyQuota = null;
+/** external account quota reported by plugins (big block on the source page) */
+const externalQuota = new Map();
 
-/** opencode free-model catalogue, refreshed from `opencode api GET /api/model` */
-let modelCatalog = { state: 'pending', models: [], checkedAt: 0, error: null };
+/** model catalogues contributed by plugins (merged for /api/models) */
+const catalogues = new Map();
 
 function setLiveQuota(source, tokens, costUsd) {
   if (tokens == null && costUsd == null) {
@@ -271,10 +281,10 @@ function weightedModel() {
 }
 
 function weightedSource() {
-  const total = SOURCES.reduce((s, x) => s + x.weight, 0);
+  const total = SOURCES.reduce((s, x) => s + (x.weight ?? 50), 0);
   let r = Math.random() * total;
   for (const s of SOURCES) {
-    r -= s.weight;
+    r -= s.weight ?? 50;
     if (r <= 0) return s;
   }
   return SOURCES[0];
@@ -284,9 +294,8 @@ function startStream() {
   const model = weightedModel();
   const source = weightedSource();
   const promptTokens = Math.floor(80 + Math.random() * 3800);
-  const targetOut = Math.floor(60 + Math.random() * source.maxOut);
-  const apps = SOURCE_APPS[source.id] || SOURCE_APPS.opencode;
-  const app = apps[Math.floor(Math.random() * apps.length)];
+  const targetOut = Math.floor(60 + Math.random() * (source.maxOut ?? 800));
+  const app = SIM_APPS[Math.floor(Math.random() * SIM_APPS.length)];
   const endpoint = ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)];
   const stream = {
     id: ++requestSeq,
@@ -457,7 +466,7 @@ function snapshot(now) {
       errors: s.errors,
       quota: quotaInfo(s.id, recentTokens, now),
       provenance: provenance.sources[s.id] ?? null,
-      providerQuota: s.id === 'antigravity' ? agyQuota : null,
+      providerQuota: externalQuota.get(s.id) ?? null,
       models: [...s.models.entries()].map(([id, m]) => ({ id, ...m })),
     };
   });
@@ -510,7 +519,7 @@ function snapshot(now) {
   };
 }
 
-/** free-model catalogue joined with observed traffic for each model */
+/** plugin-contributed catalogues joined with observed traffic for each model */
 function modelTraffic() {
   const traffic = new Map(
     [...byModel.values()].map((m) => [
@@ -532,31 +541,38 @@ function modelTraffic() {
     [...byModel.values()].map((m) => [m.modelID || m.id, m])
   );
 
-  const rows = modelCatalog.models.map((m) => {
-    const t = traffic.get(m.id) || traffic.get(m.modelID) || null;
-    const agg = byModelId.get(m.modelID) || byModelId.get(m.id) || null;
-    return {
-      ...m,
-      traffic: t || {
-        requests: agg?.requests ?? 0,
-        inputTokens: agg?.inputTokens ?? 0,
-        outputTokens: agg?.outputTokens ?? 0,
-        cacheReadTokens: agg?.cacheReadTokens ?? 0,
-        reasoningTokens: agg?.reasoningTokens ?? 0,
-        costUsd: agg?.costUsd ?? 0,
-        lastSeen: agg?.lastSeen ?? 0,
-      },
-      used: Boolean(t || (agg && agg.requests > 0)),
-    };
-  });
+  const live = [...catalogues.values()].filter((c) => c && c.state === 'live');
+  const errs = [...catalogues.values()].filter((c) => c && c.state === 'error');
+
+  const rows = live.flatMap((c) =>
+    (c.models || []).map((m) => {
+      const t = traffic.get(m.id) || traffic.get(m.modelID) || null;
+      const agg = byModelId.get(m.modelID) || byModelId.get(m.id) || null;
+      return {
+        ...m,
+        traffic: t || {
+          requests: agg?.requests ?? 0,
+          inputTokens: agg?.inputTokens ?? 0,
+          outputTokens: agg?.outputTokens ?? 0,
+          cacheReadTokens: agg?.cacheReadTokens ?? 0,
+          reasoningTokens: agg?.reasoningTokens ?? 0,
+          costUsd: agg?.costUsd ?? 0,
+          lastSeen: agg?.lastSeen ?? 0,
+        },
+        used: Boolean(t || (agg && agg.requests > 0)),
+      };
+    })
+  );
 
   rows.sort((a, b) => b.traffic.requests - a.traffic.requests || a.id.localeCompare(b.id));
 
+  const checkedAt = Math.max(0, ...[...catalogues.values()].map((c) => c?.checkedAt ?? 0));
+
   return {
-    state: modelCatalog.state,
-    error: modelCatalog.error,
-    checkedAt: modelCatalog.checkedAt,
-    totalCatalogue: modelCatalog.allCount ?? rows.length,
+    state: live.length ? 'live' : errs.length ? 'error' : 'pending',
+    error: errs.length ? errs[0].error : null,
+    checkedAt,
+    totalCatalogue: live.reduce((n, c) => n + (c.allCount ?? (c.models || []).length), 0),
     reachable: rows.filter((r) => r.reachable).length,
     models: rows,
   };
@@ -588,8 +604,12 @@ function serveStatic(req, res) {
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/') rel = '/index.html';
   else if (rel === '/detail' || rel === '/detail/') rel = '/detail.html';
-  else if (/^\/(antigravity|opencode)\/?$/.test(rel)) rel = '/source.html';
   else if (/^\/models\/?$/.test(rel)) rel = '/models.html';
+  else {
+    // any configured source id serves the per-source page
+    const m = rel.match(/^\/([a-z0-9-]+)\/?$/i);
+    if (m && SOURCES.some((s) => s.id === m[1].toLowerCase())) rel = '/source.html';
+  }
   const file = path.join(__dirname, 'public', path.normalize(rel).replace(/^(\.\.[/\\])+/, ''));
   if (!file.startsWith(path.join(__dirname, 'public'))) {
     res.writeHead(403).end('forbidden');
@@ -649,7 +669,14 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // free opencode models, reachability, and the traffic each has carried
+  // configured sources for the dynamic nav
+  if (url.pathname === '/api/sources') {
+    res.writeHead(200, { 'content-type': MIME['.json'] });
+    res.end(JSON.stringify(SOURCES.map(({ id, label, color }) => ({ id, label, color }))));
+    return;
+  }
+
+  // plugin-contributed model catalogue joined with observed traffic
   if (url.pathname === '/api/models') {
     res.writeHead(200, { 'content-type': MIME['.json'] });
     res.end(JSON.stringify(modelTraffic()));
@@ -668,7 +695,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/ingest' && req.method === 'POST') {
     const body = await readBody(req);
     const model = MODELS.find((m) => m.id === body.model) || MODELS[0];
-    const source = bySource.has(body.source) ? body.source : DEFAULT_SOURCE;
+    const source = SOURCES.some((s) => s.id === body.source) ? body.source : DEFAULT_SOURCE;
     const inputTokens = Number(body.inputTokens) || 0;
     const outputTokens = Number(body.outputTokens) || 0;
     record({
@@ -693,90 +720,119 @@ const server = http.createServer(async (req, res) => {
   serveStatic(req, res);
 });
 
-// ---------------------------------------------------------------- live reader
-// Pulls real usage written to disk by opencode / antigravity.
+// ---------------------------------------------------------------- plugins
+// Real data comes from plugins/ (git-ignored, local only) — one small module
+// per backend, see examples/plugins/. Each exports { id, intervalMs,
+// enabled?, poll } where poll() resolves to
+// { total?, events?, quota?, catalogue?, meta?, file? } or null.
+
+let plugins = [];
+
+function loadPlugins() {
+  plugins = [];
+  const dir = path.join(__dirname, 'plugins');
+  if (!fs.existsSync(dir)) return;
+  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+    try {
+      const p = require(path.join(dir, f));
+      if (!p || !p.id || typeof p.poll !== 'function') {
+        console.error(`[plugins] ${f}: must export { id, intervalMs, poll } — skipped`);
+        continue;
+      }
+      if (p.enabled === false) {
+        console.log(`[plugins] ${f}: disabled — skipped`);
+        continue;
+      }
+      if (!SOURCES.some((s) => s.id === p.id)) {
+        console.error(`[plugins] ${f}: unknown source id "${p.id}" (not in config) — skipped`);
+        continue;
+      }
+      plugins.push({ ...p, __file: f, __running: false });
+      console.log(`[plugins] ${f}: polling "${p.id}" every ${p.intervalMs || 10_000}ms`);
+    } catch (err) {
+      console.error(`[plugins] ${f}: ${err.message}`);
+    }
+  }
+}
+
+/** merge one plugin poll result into quotas, provenance, feed and catalogue */
+function applyPluginResult(id, r) {
+  if (!r) {
+    provenance.sources[id] = { state: 'unavailable', file: null };
+    setLiveQuota(id, null, null);
+    return;
+  }
+
+  // Quota meters the billed tokens; cache reads are reported alongside but
+  // do not consume allowance.
+  if (r.total) setLiveQuota(id, (r.total.input || 0) + (r.total.output || 0), r.total.cost);
+
+  provenance.sources[id] = {
+    state: 'live',
+    // never expose the absolute home path to clients
+    file: r.file ? toDisplayPath(r.file) : null,
+    total: r.total ?? null,
+    ...(r.meta || {}),
+  };
+
+  for (const m of r.events || []) {
+    record({
+      type: 'live',
+      chargeQuota: false,
+      requestId: m.requestId || 'live',
+      model: m.model || 'unknown',
+      provider: m.provider || id,
+      source: id,
+      app: m.app || 'local',
+      endpoint: m.endpoint || 'local',
+      inputTokens: m.inputTokens || 0,
+      cacheReadTokens: m.cacheReadTokens || 0,
+      reasoningTokens: m.reasoningTokens || 0,
+      outputTokens: m.outputTokens || 0,
+      costUsd: m.costUsd || 0,
+      latencyMs: null,
+      error: false,
+      ts: m.ts || Date.now(),
+    });
+  }
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+
+  if (r.quota !== undefined) {
+    if (r.quota) externalQuota.set(id, r.quota);
+    else externalQuota.delete(id);
+  }
+  if (r.catalogue !== undefined) {
+    if (r.catalogue) catalogues.set(id, r.catalogue);
+    else catalogues.delete(id);
+  }
+}
 
 let liveStarted = false;
 
 function startLiveReader() {
   if (liveStarted) return;
   liveStarted = true;
-
-  startReader({
-    intervalMs: 2000,
-    onError: (err) => console.error('[reader]', err.message),
-    onUpdate: (update) => {
-      for (const [source, u] of Object.entries(update)) {
-        if (!u.available) {
-          provenance.sources[source] = { state: 'unavailable', file: null };
-          setLiveQuota(source, null, null);
-          continue;
-        }
-
-        // Quota meters the billed tokens. Cache reads are reported alongside but
-        // do not consume allowance — they are prompt-cache hits, not new tokens.
-        const t = u.total;
-        if (t) setLiveQuota(source, (t.input || 0) + (t.output || 0), t.cost);
-
-        provenance.sources[source] = {
-          state: 'live',
-          // never expose the absolute home path to clients
-          file: toDisplayPath(u.file),
-          total: u.total,
-          ...(u.meta || {}),
-        };
-
-        // Emit the newly finished messages so the feed and chart move.
-        for (const m of u.fresh || []) {
-          const inputTokens = (m.input || 0) + (m.cacheRead || 0);
-          record({
-            type: 'live',
-            chargeQuota: false,
-            requestId: m.sessionId || m.conversation || 'live',
-            model: m.model || 'unknown',
-            provider: m.provider || source,
-            source,
-            app: m.sessionId ? m.sessionId.slice(0, 12) : m.step ?? 'local',
-            endpoint: 'local',
-            inputTokens: m.input || 0,
-            cacheReadTokens: m.cacheRead || 0,
-            reasoningTokens: m.reasoning || 0,
-            outputTokens: m.output || 0,
-            costUsd: m.cost || 0,
-            latencyMs: null,
-            error: false,
-            ts: m.ts || Date.now(),
-          });
-        }
+  loadPlugins();
+  if (!plugins.length) {
+    console.log('no plugins in plugins/ — see examples/ to connect a backend');
+  }
+  for (const p of plugins) {
+    const run = async () => {
+      if (p.__running) return;
+      p.__running = true;
+      try {
+        applyPluginResult(p.id, await p.poll());
+      } catch (err) {
+        console.error(`[plugins] ${p.__file}: ${err.message}`);
+        applyPluginResult(p.id, null);
+      } finally {
+        p.__running = false;
       }
-      // Events carry their original timestamp; keep any older ones out of the feed.
-      if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
-    },
-  });
-
-  console.log('reading local usage: opencode + antigravity');
-
-  // opencode's own model endpoint: which models exist, which are free, which respond
-  startModelReader({
-    intervalMs: Number(process.env.OC_INTERVAL) || 60_000,
-    freeOnly: true,
-    onUpdate: (c) => {
-      const prevState = modelCatalog.state;
-      modelCatalog = c;
-      if (c.state !== 'live') console.error('[models] ' + (c.error || c.state));
-      else if (prevState !== 'live') console.log(`[models] ${c.models.length} free models, ${c.models.filter((m) => m.reachable).length} reachable`);
-    },
-  });
-
-  // antigravity has no local API; its quota comes from the agy CLI (~5s per call)
-  startAgyReader({
-    intervalMs: Number(process.env.AGY_INTERVAL) || 5 * 60_000,
-    onUpdate: (q) => {
-      agyQuota = q;
-      if (q.state !== 'live') console.error('[agy] ' + (q.error || 'unknown error'));
-    },
-    onError: (err) => console.error('[agy]', err.message),
-  });
+    };
+    run();
+    const timer = setInterval(run, p.intervalMs || 10_000);
+    timer.unref?.();
+  }
 }
 
 server.on('error', (err) => {

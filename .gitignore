@@ -1,3 +1,8 @@
 node_modules/
 *.log
 .DS_Store
+
+# local-only: never committed
+plugins/
+!plugins/.gitkeep
+config/sources.json

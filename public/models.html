@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Free models — Token View</title>
+<title>Model catalogue — Token View</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -11,17 +11,11 @@
   <div class="brand">
     <span class="dot" id="statusDot"></span>
     <h1>Token<span>View</span></h1>
-    <span class="sub">free model traffic</span>
+    <span class="sub">model catalogue</span>
   </div>
-  <nav class="nav">
-    <a class="nav-link" href="/">All</a>
-    <a class="nav-link" href="/antigravity">Antigravity</a>
-    <a class="nav-link" href="/opencode">OpenCode</a>
-    <a class="nav-link" id="navModels" href="/models">Free models</a>
-    <a class="nav-link" href="/detail">Detail</a>
-  </nav>
+  <nav class="nav" id="mainNav"></nav>
   <div class="topmeta">
-    <span class="pill" id="modePill">free only</span>
+    <span class="pill" id="modePill">catalogue</span>
     <span id="clock" class="mono">--:--:--</span>
     <span class="pill" id="connPill">connecting</span>
   </div>
@@ -30,7 +24,7 @@
 <main>
   <section class="kpis">
     <div class="kpi">
-      <span class="label">Free models</span>
+      <span class="label">Models</span>
       <strong id="freeCount" class="value">0</strong>
       <span class="delta" id="catalogueNote">&nbsp;</span>
     </div>
@@ -45,7 +39,7 @@
       <span class="delta">carried traffic</span>
     </div>
     <div class="kpi">
-      <span class="label">Unused but free</span>
+      <span class="label">Unused</span>
       <strong id="idleCount" class="value">0</strong>
       <span class="delta" id="idleNote">&nbsp;</span>
     </div>
@@ -55,7 +49,7 @@
       <span class="delta" id="bestContextNote">&nbsp;</span>
     </div>
     <div class="kpi">
-      <span class="label">Traffic on free models</span>
+      <span class="label">Catalogue traffic</span>
       <strong id="freeTraffic" class="value">0</strong>
       <span class="delta" id="freeTrafficNote">&nbsp;</span>
     </div>
@@ -63,7 +57,7 @@
 
   <section class="panel">
     <div class="panel-head">
-      <h2>Free models — traffic &amp; reachability</h2>
+      <h2>Catalogue — traffic &amp; reachability</h2>
       <div class="legend">
         <span class="key"><span class="dot ok"></span>can connect</span>
         <span class="key"><span class="dot bad"></span>blocked</span>
@@ -87,16 +81,17 @@
   </section>
 
   <section class="panel">
-    <div class="panel-head"><h2>Traffic by free model</h2><span class="range">total tokens</span></div>
+    <div class="panel-head"><h2>Traffic by model</h2><span class="range">total tokens</span></div>
     <div id="shareBars" class="sharebars"></div>
   </section>
 </main>
 
 <footer class="foot">
-  <span>catalogue from <code>opencode api GET /api/model</code> · traffic from <code>GET /api/models</code></span>
-  <span>reachability = opencode <code>status</code> / <code>enabled</code></span>
+  <span>catalogue from active plugins · traffic from <code>GET /api/models</code></span>
+  <span>reachability = plugin <code>status</code> / <code>enabled</code></span>
 </footer>
 
+<script src="/nav.js"></script>
 <script src="/models.js"></script>
 </body>
 </html>
