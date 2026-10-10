@@ -208,74 +208,93 @@ function renderModels(s, snap) {
 }
 
 function renderQuota(s) {
-  const color = s.color;
   const q = s.quota;
 
-  const tokenBar = q
-    ? (() => {
-        const lv = quotaLevel(q.usedPct);
-        const cls = q.usedPct >= 1 ? 'over' : lv === 'crit' ? 'crit' : lv === 'warn' ? 'warn' : '';
-        const leftColor = lv === 'crit' ? 'danger' : lv === 'warn' ? 'warnish' : '';
-        const reset = q.resetAt ? 'resets ' + new Date(q.resetAt).toLocaleDateString() : 'no reset';
-        const burn =
-          q.exhaustedInSec < Infinity && q.exhaustedInSec < 86400
-            ? 'runs out in ' + duration(q.exhaustedInSec)
-            : reset;
-        return `
-        <div class="bucket">
-          <div class="quota-top">
-            <span class="qlabel">local allowance · ${q.period}</span>
-            <span class="qleft ${leftColor}">${compact(q.remainingTokens)} tok left</span>
-          </div>
-          <div class="meter"><i class="${cls}" style="width:${Math.min(100, q.usedPct * 100).toFixed(2)}%"></i></div>
-          <div class="quota-sub"><span>${compact(q.usedTokens)} used — ${(q.usedPct * 100).toFixed(2)}%</span>
-          <span class="${leftColor}">${burn}</span></div>
-        </div>`;
-      })()
-    : '';
+  // ---- local tracker: secondary, compact ----
+  let local = '';
+  if (q) {
+    const lv = quotaLevel(q.usedPct);
+    const cls = q.usedPct >= 1 ? 'over' : lv === 'crit' ? 'crit' : lv === 'warn' ? 'warn' : '';
+    const leftColor = lv === 'crit' ? 'danger' : lv === 'warn' ? 'warnish' : '';
+    const reset = q.resetAt ? 'resets ' + new Date(q.resetAt).toLocaleDateString() : 'no reset';
+    const burn =
+      q.exhaustedInSec < Infinity && q.exhaustedInSec < 86400
+        ? 'runs out in ' + duration(q.exhaustedInSec)
+        : reset;
+    local = `
+      <div class="bucket local">
+        <div class="quota-top">
+          <span class="qlabel">local tracker · ${q.period} (this dashboard's own counter)</span>
+          <span class="qleft ${leftColor}">${compact(q.remainingTokens)} left</span>
+        </div>
+        <div class="meter slim"><i class="${cls}" style="width:${Math.min(100, q.usedPct * 100).toFixed(2)}%"></i></div>
+        <div class="quota-sub"><span>${compact(q.usedTokens)} used — ${(q.usedPct * 100).toFixed(2)}%</span>
+        <span class="${leftColor}">${burn}</span></div>
+      </div>`;
+  }
 
-  const pq = s.providerQuota;
+  // ---- account quota: primary, big and scannable ----
   let provider = '';
+  const pq = s.providerQuota;
   if (pq) {
     if (pq.state !== 'live') {
-      provider = `<div class="bucket"><div class="quota-top">
-        <span class="qlabel">antigravity account quota</span><span class="qleft danger">unavailable</span></div>
-        <div class="delta">agy CLI: ${pq.error || 'no response'}</div></div>`;
+      provider = `<div class="qb wide">
+        <div class="qb-head"><span>account quota</span><span class="badge crit">unavailable</span></div>
+        <div class="delta">agy CLI: ${pq.error || 'no response'}</div>
+      </div>`;
     } else {
       provider =
-        `<div class="qlabel" style="margin-bottom:8px">antigravity account quota · from agy CLI</div>` +
+        `<div class="qb-head wide"><span>account quota · antigravity</span>
+          <span class="delta">live from agy CLI · checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span>
+        </div>` +
         pq.buckets
           .map((b) => {
             const frac = b.remainingFraction ?? 0;
-            const used = 1 - frac;
-            const lv = quotaLevel(used);
-            const cls = used >= 1 ? 'over' : lv === 'crit' ? 'crit' : lv === 'warn' ? 'warn' : '';
-            const txt = (frac * 100).toFixed(frac > 0 && frac < 0.01 ? 2 : 0) + '% left';
-            return `<div class="bucket">
-          <div class="quota-top">
-            <span class="qlabel">${b.group}</span>
-            <span class="qleft ${lv === 'crit' ? 'danger' : lv === 'warn' ? 'warnish' : ''}">${txt}</span>
+            const st = frac <= 0 ? { k: 'crit', t: 'exhausted' } : frac < 0.15 ? { k: 'warn', t: 'low' } : { k: 'ok', t: 'ok' };
+            const big = (frac * 100).toFixed(frac > 0 && frac < 0.01 ? 2 : 0) + '%';
+            return `<div class="qb wide">
+          <div class="qb-head">
+            <span>${b.group}</span>
+            <span class="badge ${st.k}">${st.t}</span>
           </div>
-          <div class="meter"><i class="${cls}" style="width:${Math.min(100, frac * 100).toFixed(2)}%"></i></div>
-          <div class="quota-sub"><span>${b.window} · ${b.name}</span>
-          <span>${b.resetTime ? 'resets ' + new Date(b.resetTime).toLocaleString() : ''}</span></div>
+          <div class="qb-big">${big}<small>left</small></div>
+          <div class="meter"><i class="${frac <= 0 ? 'over' : st.k === 'warn' ? 'warn' : ''}" style="width:${Math.min(100, frac * 100).toFixed(2)}%"></i></div>
+          <div class="quota-sub">
+            <span>${b.window} · ${b.name}</span>
+            <span>${b.resetTime ? 'resets ' + new Date(b.resetTime).toLocaleString() + ' (' + countdownTo(b.resetTime) + ')' : ''}</span>
+          </div>
+          ${b.description ? `<details class="qb-desc"><summary>details</summary><p>${b.description}</p></details>` : ''}
         </div>`;
           })
           .join('') +
         (pq.credits && pq.credits.remaining != null
-          ? `<div class="quota-sub" style="margin-top:8px"><span>G1 credits</span><b>${pq.credits.remaining}</b></div>`
-          : '') +
-        `<div class="quota-sub" style="margin-top:6px"><span>checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span></div>`;
+          ? `<div class="qb wide qb-credits"><span>G1 credits</span><b>${pq.credits.remaining}</b></div>`
+          : '');
     }
   }
 
-  $('provNote').textContent = s.provenance?.state === 'live'
-    ? 'reading ' + String(s.provenance.file).replace(/^\/home\/[^/]+/, '~')
-    : 'no local data';
+  const prov = s.provenance?.state === 'live' && s.provenance?.file
+    ? `<div class="delta wide prov-foot">reads ${String(s.provenance.file)}${
+        s.provenance.sessions != null ? ` · ${s.provenance.sessions} sessions` : ''
+      }${
+        s.provenance.conversationsTotal != null
+          ? ` · ${s.provenance.conversationsScanned}/${s.provenance.conversationsTotal} conversations`
+          : ''
+      }</div>`
+    : '';
+
+  $('provNote').textContent = pq && pq.state === 'live' ? 'account + local' : 'local only';
 
   $('quotaBox').innerHTML =
-    (tokenBar || provider ? tokenBar + provider : '') ||
+    (provider || local ? provider + local + prov : '') ||
     '<div class="delta">no usage recorded yet</div>';
+}
+
+function countdownTo(iso) {
+  if (!iso) return '';
+  const sec = (new Date(iso).getTime() - Date.now()) / 1000;
+  if (sec <= 0) return 'now';
+  return 'in ' + duration(sec);
 }
 
 function duration(sec) {
