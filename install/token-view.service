@@ -24,5 +24,10 @@ ReadOnlyPaths=%h/Token-View
 # `opencode api` insists on opening its own log file for writing.
 ReadWritePaths=%h/.local/share/opencode/log
 
+# Polling a second antigravity account from a separate HOME
+# (examples/plugins/antigravity-quota.js, AGY_EXTRA_ACCOUNTS)?
+# agy must be able to refresh that profile's OAuth token:
+# ReadWritePaths=%h/.profiles/agy-second/.gemini/antigravity-cli
+
 [Install]
 WantedBy=graphical-session.target

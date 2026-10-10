@@ -250,6 +250,7 @@ function renderQuota(s) {
         `<div class="qb-head wide"><span>account quota · ${s.label}</span>
           <span class="delta">live from plugin · checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span>
         </div>` +
+        (pq.error ? `<div class="delta wide">partial: ${pq.error}</div>` : '') +
         pq.buckets
           .map((b) => {
             const frac = b.remainingFraction ?? 0;
@@ -270,9 +271,7 @@ function renderQuota(s) {
         </div>`;
           })
           .join('') +
-        (pq.credits && pq.credits.remaining != null
-          ? `<div class="qb wide qb-credits"><span>G1 credits</span><b>${pq.credits.remaining}</b></div>`
-          : '');
+        creditsCards(pq.credits);
     }
   }
 
@@ -309,6 +308,18 @@ function duration(sec) {
   if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m ${Math.floor(sec % 60)}s`;
+}
+
+/** one "G1 credits" card per account; accepts a single object or an array */
+function creditsCards(credits) {
+  const list = Array.isArray(credits) ? credits : credits ? [credits] : [];
+  return list
+    .filter((c) => c && c.remaining != null)
+    .map(
+      (c) =>
+        `<div class="qb wide qb-credits"><span>G1 credits${c.label ? ' · ' + c.label : ''}</span><b>${c.remaining}</b></div>`
+    )
+    .join('');
 }
 
 // ---------------------------------------------------------------- live tokens
