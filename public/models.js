@@ -99,7 +99,7 @@ function renderTable(models, total) {
         <td class="r dim">${t.cacheReadTokens ? num(t.cacheReadTokens) : '—'}</td>
         <td class="r"><b>${tok ? num(tok) : '—'}</b></td>
         <td class="r">${tok ? pct(share) : '—'}</td>
-        <td><span class="split"><i style="width:${(share * 100).toFixed(1)}%;background:#22d3ee"></i></span></td>
+        <td><span class="split"><i style="width:${(share * 100).toFixed(1)}%;background:#4ade80"></i></span></td>
         <td class="dim">${t.lastSeen ? ago(t.lastSeen) : 'never'}</td>
       </tr>`;
     })
@@ -121,14 +121,14 @@ function renderShare(models, total) {
         return `
       <div class="model-row">
         <div class="model-name">
-          <span class="chip" style="background:#22d3ee"></span>
+          <span class="chip" style="background:#4ade80"></span>
           <b>${m.id}</b> <small>${m.provider} · ${num(t.requests)} reqs${m.reachable ? '' : ' · blocked'}</small>
         </div>
         <div class="model-num">${compact(tok)} tok · ${pct(share)}</div>
-        <div class="bar"><i style="width:${(share * 100).toFixed(1)}%;background:#22d3ee"></i></div>
+        <div class="bar"><i style="width:${(share * 100).toFixed(1)}%;background:#4ade80"></i></div>
         <div class="src-bar">
-          <i style="width:${(inShare * 100).toFixed(1)}%;background:#22d3ee;opacity:.35"></i>
-          <i style="width:${((1 - inShare) * 100).toFixed(1)}%;background:#22d3ee"></i>
+          <i style="width:${(inShare * 100).toFixed(1)}%;background:#4ade80;opacity:.35"></i>
+          <i style="width:${((1 - inShare) * 100).toFixed(1)}%;background:#4ade80"></i>
         </div>
       </div>`;
       })

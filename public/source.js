@@ -68,8 +68,8 @@ function drawChart() {
 
   const max = Math.max(80, ...buckets.map((b) => b.input + b.output)) * 1.15;
 
-  ctx.strokeStyle = '#1c2333';
-  ctx.fillStyle = '#7b87a1';
+  ctx.strokeStyle = '#1e2a1e';
+  ctx.fillStyle = '#6f8a6f';
   ctx.lineWidth = 1;
   ctx.font = '11px ui-monospace, monospace';
   ctx.textAlign = 'right';
@@ -99,13 +99,13 @@ function drawChart() {
       ctx.fillRect(x(i) + offset, base - bh, width, bh);
     });
   };
-  bars('input', 'rgba(125,140,170,.55)', 0.55);
-  bars('output', 'rgba(167,139,250,.9)', 0.9);
+  bars('input', 'rgba(110,150,110,.5)', 0.55);
+  bars('output', 'rgba(74,222,128,.85)', 0.9);
 
   const last = buckets[buckets.length - 1];
   if (last) {
     const py = pad.t + ih - ((last.input + last.output) / max) * ih;
-    ctx.fillStyle = '#a78bfa';
+    ctx.fillStyle = '#4ade80';
     ctx.beginPath();
     ctx.arc(x(buckets.length - 1), py, 3.5, 0, Math.PI * 2);
     ctx.fill();
@@ -113,7 +113,7 @@ function drawChart() {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = '#5c6780';
+  ctx.fillStyle = '#556b55';
   const tail = buckets.slice(-4);
   tail.forEach((b, k) => {
     const i = buckets.length - tail.length + k;
@@ -312,7 +312,7 @@ function renderEvent(e) {
 
 const modelColor = new Map();
 function colorOf(id) {
-  if (!modelColor.has(id)) modelColor.set(id, '#7b87a1');
+  if (!modelColor.has(id)) modelColor.set(id, '#6f8a6f');
   return modelColor.get(id);
 }
 
