@@ -27,8 +27,9 @@ traffic so the pages are never blank.
 | `plugins/opencode-db.js` | Real usage from the opencode SQLite database (totals + per-message feed). Tracks one provider per copy — set `SOURCE_ID`/`PROVIDER` at the top (e.g. copy to `openrouter-db.js` with both set to `'openrouter'`) |
 | `plugins/opencode-catalogue.js` | Free models of the opencode (Zen) provider via `opencode api GET /api/model`, plus per-model rate-limit hits scraped from the opencode log |
 | `plugins/openrouter.js` | Free models of the OpenRouter provider, plus real quota from `GET /api/v1/auth/key` (monthly budget + free daily allowance) and per-model rate-limit hits |
-| `plugins/antigravity-quota.js` | Antigravity quota via `agy -p "/usage"` + `/credits`, with multi-account support (`AGY_EXTRA_ACCOUNTS="Label=/path/to/home"`); buckets are labelled with the account email decoded from each profile's id_token |
+| `plugins/antigravity-db.js` | Antigravity usage scraped from local conversation SQLite DBs (best-effort — most conversations lack token counts; not real-time, ~10s delay) |
 | `plugins/antigravity-catalogue.js` | Antigravity model menu via `agy models` (one `id<TAB>Name` pair per line) |
+| `plugins/antigravity-quota.js` | Antigravity quota via `agy -p "/usage"` + `/credits`, with multi-account support (`AGY_EXTRA_ACCOUNTS="Label=/path/to/home"`); buckets are labelled with the account email decoded from each profile's id_token |
 | `plugins/rest-poller.js` | **Template**: poll any HTTP JSON endpoint (`enabled: false` until configured) |
 | `plugins/cli-poller.js` | **Template**: run any CLI that prints JSON, expose it as the account quota block |
 | `plugins/plugin-template.js` | Minimal skeleton with the full result reference |
