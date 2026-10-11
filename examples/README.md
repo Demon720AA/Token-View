@@ -28,6 +28,7 @@ traffic so the pages are never blank.
 | `plugins/opencode-catalogue.js` | Free models of the opencode (Zen) provider via `opencode api GET /api/model`, plus per-model rate-limit hits scraped from the opencode log |
 | `plugins/openrouter.js` | Free models of the OpenRouter provider, plus real quota from `GET /api/v1/auth/key` (monthly budget + free daily allowance) and per-model rate-limit hits |
 | `plugins/antigravity-quota.js` | Antigravity quota via `agy -p "/usage"` + `/credits`, with multi-account support (`AGY_EXTRA_ACCOUNTS="Label=/path/to/home"`); buckets are labelled with the account email decoded from each profile's id_token |
+| `plugins/antigravity-catalogue.js` | Antigravity model menu via `agy models` (one `id<TAB>Name` pair per line) |
 | `plugins/rest-poller.js` | **Template**: poll any HTTP JSON endpoint (`enabled: false` until configured) |
 | `plugins/cli-poller.js` | **Template**: run any CLI that prints JSON, expose it as the account quota block |
 | `plugins/plugin-template.js` | Minimal skeleton with the full result reference |
