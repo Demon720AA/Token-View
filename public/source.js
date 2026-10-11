@@ -251,26 +251,7 @@ function renderQuota(s) {
           <span class="delta">live from plugin · checked ${new Date(pq.checkedAt).toLocaleTimeString()}</span>
         </div>` +
         (pq.error ? `<div class="delta wide">partial: ${pq.error}</div>` : '') +
-        pq.buckets
-          .map((b) => {
-            const frac = b.remainingFraction ?? 0;
-            const st = frac <= 0 ? { k: 'crit', t: 'exhausted' } : frac < 0.15 ? { k: 'warn', t: 'low' } : { k: 'ok', t: 'ok' };
-            const big = (frac * 100).toFixed(frac > 0 && frac < 0.01 ? 2 : 0) + '%';
-            return `<div class="qb wide">
-          <div class="qb-head">
-            <span>${b.group}</span>
-            <span class="badge ${st.k}">${st.t}</span>
-          </div>
-          <div class="qb-big">${big}<small>left</small></div>
-          <div class="meter"><i class="${frac <= 0 ? 'over' : st.k === 'warn' ? 'warn' : ''}" style="width:${Math.min(100, frac * 100).toFixed(2)}%"></i></div>
-          <div class="quota-sub">
-            <span>${b.window} · ${b.name}</span>
-            <span>${b.resetTime ? 'resets ' + new Date(b.resetTime).toLocaleString() + ' (' + countdownTo(b.resetTime) + ')' : ''}</span>
-          </div>
-          ${b.description ? `<details class="qb-desc"><summary>details</summary><p>${b.description}</p></details>` : ''}
-        </div>`;
-          })
-          .join('') +
+        quotaGroups(pq.buckets) +
         creditsCards(pq.credits);
     }
   }
@@ -311,6 +292,61 @@ function duration(sec) {
 }
 
 /** one "G1 credits" card per account; accepts a single object or an array */
+/** one card per quota group, with a compact row per limit (5h, weekly, ...) */
+function quotaGroups(buckets) {
+  const groups = new Map();
+  for (const b of buckets) {
+    if (!groups.has(b.group)) groups.set(b.group, []);
+    groups.get(b.group).push(b);
+  }
+  const resetAt = (b) => {
+    const t = b.resetTime ? Date.parse(b.resetTime) : NaN;
+    return Number.isFinite(t) ? t : Infinity;
+  };
+  return [...groups.values()]
+    .map((list) => {
+      // soonest reset first: the tightest window is the one to watch
+      list.sort((a, b) => resetAt(a) - resetAt(b));
+      const worst = list.reduce((w, b) => {
+        const f = b.remainingFraction ?? 0;
+        if (f <= 0 || w === 'crit') return 'crit';
+        if (f < 0.15 || w === 'warn') return 'warn';
+        return 'ok';
+      }, 'ok');
+      const wt = worst === 'crit' ? 'exhausted' : worst === 'warn' ? 'low' : 'ok';
+      const descs = list
+        .filter((b) => b.description)
+        .map((b) => `<p>${b.description}</p>`)
+        .join('');
+      return `<div class="qb wide">
+        <div class="qb-head">
+          <span>${list[0].group}</span>
+          <span class="badge ${worst}">${wt}</span>
+        </div>
+        ${list.map(limitRow).join('')}
+        ${descs ? `<details class="qb-desc"><summary>details</summary>${descs}</details>` : ''}
+      </div>`;
+    })
+    .join('');
+}
+
+function limitRow(b) {
+  const frac = b.remainingFraction ?? 0;
+  const k = frac <= 0 ? 'crit' : frac < 0.15 ? 'warn' : 'ok';
+  const pct = (frac * 100).toFixed(frac > 0 && frac < 0.01 ? 2 : 0) + '%';
+  return `<div class="qb-lim">
+    <div class="quota-top">
+      <span class="qlabel">${b.name}</span>
+      <span class="qleft">${pct}</span>
+    </div>
+    <div class="meter"><i class="${frac <= 0 ? 'over' : k === 'warn' ? 'warn' : ''}" style="width:${Math.min(100, frac * 100).toFixed(2)}%"></i></div>
+    <div class="quota-sub">
+      <span>${b.window}</span>
+      <span>${b.resetTime ? 'resets ' + new Date(b.resetTime).toLocaleString() + ' (' + countdownTo(b.resetTime) + ')' : ''}</span>
+    </div>
+  </div>`;
+}
+
 function creditsCards(credits) {
   const list = Array.isArray(credits) ? credits : credits ? [credits] : [];
   return list

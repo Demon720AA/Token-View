@@ -306,6 +306,9 @@ canvas { width: 100%; height: 220px; display: block; }
 .qb-desc { margin-top: 8px; color: var(--muted); font-size: 11.5px; }
 .qb-desc summary { cursor: pointer; color: var(--dim); }
 .qb-desc summary:hover { color: var(--text); }
+/* compact limit rows inside a merged quota card */
+.qb-lim { margin-top: 10px; }
+.qb-lim .meter { height: 8px; }
 .qb-desc p { margin: 6px 0 0; line-height: 1.6; }
 .bucket.local { opacity: .85; }
 .meter.slim { height: 7px; }
