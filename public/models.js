@@ -25,6 +25,24 @@ function ago(ts) {
   return Math.round(s / 86400) + 'd ago';
 }
 
+/** Format model traffic row for the models table.
+ *  Returns a DOM string with tokens, requests, and cost. */
+function modelTrafficRow(m) {
+  const tok = m.inputTokens + m.outputTokens;
+  if (!tok) return '';
+  const share = tok / (window.modelTotalTokens || 1);
+  const cost = m.costUsd ? '$' + m.costUsd.toFixed(2) : '—';
+  return `
+    <div class="model-row">
+      <div class="model-name">
+        <span class="chip" style="background:${m.color || '#22d3ee'}"></span>
+        <b>${m.id}</b> <small>${m.requests || 0} reqs</small>
+      </div>
+      <div class="model-num">${compact(tok)} tok · ${cost} · ${pct(share)}</div>
+      <div class="bar"><i style="width:${(share * 100).toFixed(1)}%;background:${m.color || '#22d3ee'}"></i></div>
+    </div>`;
+}
+
 let last = null;
 
 function stateOf(m) {
